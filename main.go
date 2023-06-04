@@ -10,33 +10,41 @@ import (
 )
 
 func main() {
+	var (
+		err  error
+		body string
+		bs   []byte
+	)
+
+	// flags ...
 	filePtr := flag.String("f", "", "Template filename, default STDIN")
 	flag.Parse()
 
-	var body []byte
-	var b string
-	var err error
-
+	// read template body ...
 	if *filePtr != "" {
-		body, err = os.ReadFile(*filePtr)
+		bs, err = os.ReadFile(*filePtr)
 	} else {
-		body, err = io.ReadAll(os.Stdin)
+		bs, err = io.ReadAll(os.Stdin)
 	}
-
 	if err != nil {
 		panic(err)
 	}
-	b = string(body)
+	body = string(bs)
 
+	// replace each available environmental variable ...
 	for _, e := range os.Environ() {
-		pair := strings.SplitN(e, "=", 2)
+		env := strings.SplitN(e, "=", 2)
+		quoted := regexp.QuoteMeta(env[0])
+		// ... replace "$VAR" and "${VAR}" ...
 		for _, from := range []string{
-			fmt.Sprintf("\\$%s\\b", regexp.QuoteMeta(pair[0])),
-			fmt.Sprintf("\\${%s}", regexp.QuoteMeta(pair[0])),
+			fmt.Sprintf("\\$%s\\b", quoted),
+			fmt.Sprintf("\\${%s}", quoted),
 		} {
 			r := regexp.MustCompile(from)
-			b = r.ReplaceAllString(b, pair[1])
+			body = r.ReplaceAllString(body, env[1])
 		}
 	}
-	fmt.Println(b)
+
+	// ... output replaced text
+	fmt.Println(body)
 }
