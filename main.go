@@ -17,11 +17,11 @@ func main() {
 	)
 
 	// flags ...
-	filePtr := flag.String("f", "", "Template filename, default STDIN")
+	filePtr := flag.String("f", "", "Template filename, default STDIN (\"-\" means stdin)")
 	flag.Parse()
 
 	// read template body ...
-	if *filePtr != "" {
+	if *filePtr != "" && *filePtr != "-" {
 		bs, err = os.ReadFile(*filePtr)
 	} else {
 		bs, err = io.ReadAll(os.Stdin)
