@@ -1,13 +1,24 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"regexp"
 	"strings"
+
+	isatty "github.com/mattn/go-isatty"
 )
+
+func Usage(exitCode int) {
+	out := os.Stdout
+	if exitCode > 0 {
+		out = os.Stderr
+	}
+	fmt.Fprintf(out, "%s <template file>\n... or ...\ncat <template file> | %s [-]\n", path.Base(os.Args[0]), path.Base(os.Args[0]))
+	os.Exit(exitCode)
+}
 
 func main() {
 	var (
@@ -16,18 +27,33 @@ func main() {
 		bs   []byte
 	)
 
-	// flags ...
-	filePtr := flag.String("f", "", "Template filename, default STDIN (\"-\" means stdin)")
-	flag.Parse()
+	// help?
+	if len(os.Args) > 1 {
+		for _, value := range os.Args {
+			if value == "-h" || value == "--help" {
+				Usage(0)
+			}
+		}
+	}
 
 	// read template body ...
-	if *filePtr != "" && *filePtr != "-" {
-		bs, err = os.ReadFile(*filePtr)
+	if !isatty.IsTerminal(os.Stdin.Fd()) {
+		if len(os.Args) == 1 || os.Args[1] == "-" {
+			bs, err = io.ReadAll(os.Stdin)
+		} else {
+			Usage(1)
+		}
 	} else {
-		bs, err = io.ReadAll(os.Stdin)
+		if len(os.Args) == 2 {
+			bs, err = os.ReadFile(os.Args[1])
+		} else {
+			Usage(1)
+		}
 	}
+
 	if err != nil {
-		panic(err)
+		fmt.Fprintf(os.Stderr, "%s", err)
+		os.Exit(2)
 	}
 	body = string(bs)
 
